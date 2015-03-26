@@ -3,9 +3,10 @@
 var global = window;
 var loaded = {};
 var UA = navigator.userAgent
+var docm = document
 var hist = global.history
 var isOldWebKit = +UA.replace(/.*AppleWebKit\/(\d+)\..*/, '$1') < 536;
-var head = document.head || document.getElementsByTagName('head')[0];
+var head = docm.head || docm.getElementsByTagName('head')[0];
 
 var TIMEOUT = 60 * 1000; // pagelet请求的默认超时时间
 var combo = false; // 是否采用combo
@@ -22,13 +23,14 @@ var supportPushState =
 function load(url, type, callback) {
     var isScript = type === 'js';
     var isCss = type === 'css';
-    var node = document.createElement(isScript ? 'script' : 'link');
+    var node = docm.createElement(isScript ? 'script' : 'link');
     var supportOnload = 'onload' in node;
     var tid = setTimeout(function() {
         clearTimeout(tid);
         clearInterval(intId);
         callback('timeout');
     }, TIMEOUT);
+
     var intId;
     if (isScript) {
         node.type = 'text/javascript';
@@ -57,7 +59,7 @@ function load(url, type, callback) {
         e.message = 'Error loading [' + url + ']: ' + e.message;
         callback(e);
     };
-    head.appendChild(node);
+    _appendChild(head, node);
     if (isCss) {
         if (isOldWebKit || !supportOnload) {
             intId = setInterval(function() {
@@ -69,10 +71,6 @@ function load(url, type, callback) {
             }, 20);
         }
     }
-}
-
-function is(obj, type) {
-    return Object.prototype.toString.call(obj) === '[Object ' + type + ']';
 }
 
 /**
@@ -120,7 +118,7 @@ pagelet.load = function(url, pagelets, callback, progress) {
                     if (error) {
                         callback(error);
                     } else {
-                        document.title = result.title || document.title;
+                        docm.title = result.title || docm.title;
                         var res = [];
                         addResource(res, result.js, 'js');
                         addResource(res, result.css, 'css');
@@ -166,12 +164,12 @@ pagelet.go = function(url, pagelets, processHtml, progress) {
         if (!state) {
             state = {
                 url: global.location.href,
-                title: document.title
+                title: docm.title
             };
-            hist.replaceState(state, document.title);
+            hist.replaceState(state, docm.title);
         }
         pagelet.load(url, pagelets, function(err, data, done) {
-            var title = data.title || document.title;
+            var title = data.title || docm.title;
             state = {
                 url: url,
                 title: title
@@ -179,7 +177,7 @@ pagelet.go = function(url, pagelets, processHtml, progress) {
             hist.replaceState(state, title, url);
             // Clear out any focused controls before inserting new page contents.
             try {
-                document.activeElement.blur()
+                docm.activeElement.blur()
             } catch (e) {}
             if (processHtml(null, data.html) !== false) done();
         }, progress);
@@ -198,7 +196,7 @@ pagelet.autoload = function() {
             location.href = state.url;
         }
     }, false);
-    document.documentElement.addEventListener('click', function(e) {
+    docm.docmElement.addEventListener('click', function(e) {
         var target = e.target;
         if (target.tagName.toLowerCase() === 'a') {
             // Middle click, cmd click, and ctrl click should open
@@ -239,7 +237,7 @@ pagelet.autoload = function() {
                         for (var key in html) {
                             if (html.hasOwnProperty(key) && map.hasOwnProperty(key)) {
                                 var parent = map[key];
-                                var dom = document.getElementById(parent);
+                                var dom = docm.getElementById(parent);
                                 if (dom) {
                                     dom.innerHTML = html[key];
                                     dom = null;
@@ -269,6 +267,9 @@ function filter(item) {
 function _attr(el, attName) {
     return el.getAttribute(attName)
 }
+function _appendChild(node, child) {
+    return node.appendChild(child);
+}
 function addResource(result, collect, type) {
     if (collect && collect.length) {
         collect = collect.filter(function(uri) {
@@ -294,10 +295,13 @@ function addResource(result, collect, type) {
         }
     }
 }
+function is(obj, type) {
+    return Object.prototype.toString.call(obj) === '[Object ' + type + ']';
+}
 function exec(code) {
-    var node = document.createElement('script');
-    node.appendChild(document.createTextNode(code));
-    head.appendChild(node);
+    var node = docm.createElement('script');
+    _appendChild(node, docm.createTextNode(code));
+    _appendChild(head, node);
 }
 
 module.exports = pagelet;

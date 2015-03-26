@@ -12,7 +12,7 @@ gulp.task('watch', function () {
 });
 
 gulp.task('default', function() {
-    return gulp.src('index.js')
+    return gulp.src('pagelet.js')
         .pipe(webpack({
             output: {
                 library: 'pagelet',
