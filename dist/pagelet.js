@@ -69,6 +69,13 @@ var pagelet =
 	 */
 	messagify(pagelet);
 
+	var _ts = function () {
+	    return +Date.now()
+	}
+	pagelet.config = function (conf) {
+	    if (!conf) return
+	    conf.ts && (_ts = conf.ts)
+	}
 	pagelet.init = function(cb, cbp, used) {
 	    combo = !!cb;
 	    comboPattern = cbp || DEFAULT_COMBO_PATTERN;
@@ -203,7 +210,7 @@ var pagelet =
 	                }
 	                if (autocache === 'false') {
 	                    // 让pagelet请求带上时间戳，避免命中浏览器缓存
-	                    href += (href.indexOf('?') >= 0 ? '&' : '?') + '_ts=' + Date.now();
+	                    href += (href.indexOf('?') >= 0 ? '&' : '?') + '_ts=' + _ts();
 	                }
 
 	                var map = {};

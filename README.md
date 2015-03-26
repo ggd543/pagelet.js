@@ -37,3 +37,15 @@ pagelet.load('/news?p=123', ['list', 'hot'], function(err, data, done){
   }
 });
 ```
+
+## pagelet.on(EventType, handler)
+
+> 监听 pagelet 发出来的消息
+
+内置的事件类型 `EventType` 有:
+- *"beforeload":* 在 pagelet 发起请求前触发，处理方法：handler(pagelets, xhr)
+- *"loadend":* 在 pagelet 请求完成后触发，处理方法：handler(pagelets, error, result)
+
+## pagelet.off(EventType [, handler])
+
+> 解绑由 pagelet.on 监听的事件
