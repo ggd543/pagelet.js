@@ -2,6 +2,11 @@
 
 > scrat seo模式的pagelet框架
 
+## Downloads
+- [pagelet.js](https://raw.githubusercontent.com/scrat/pagelet.js/master/dist/pagelet.js)
+- [pagelet.min.js](https://raw.githubusercontent.com/scrat/pagelet.js/master/dist/pagelet.min.js)
+
+
 ## API
 
 ### pagelet.autoload();
