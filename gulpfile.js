@@ -16,7 +16,7 @@ gulp.task('default', function() {
         .pipe(webpack({
             output: {
                 library: 'pagelet',
-                libraryTarget: 'umd',
+                libraryTarget: 'var',
                 filename: 'pagelet.js'
             }
         }))

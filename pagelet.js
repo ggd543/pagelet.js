@@ -8,17 +8,20 @@ var comboPattern = DEFAULT_COMBO_PATTERN;
 var combo = false; // 是否采用combo
 var loaded = {};
 var loader = require('./lib/loader')
-
+var messagify = require('./lib/messagify')
 // 是否支持Html5的PushState
 var supportPushState =
     hist && hist.pushState && hist.replaceState &&
     // pushState isn't reliable on iOS until 5.
     !navigator.userAgent.match(/((iPod|iPhone|iPad).+\bOS\s+[1-4]\D|WebApps\/.+CFNetwork)/);
 
-/**
- *  pagelet module methods define
- */
+
 var pagelet = {};
+/**
+ *  Attature message function to pagelet instance
+ */
+messagify(pagelet);
+
 pagelet.init = function(cb, cbp, used) {
     combo = !!cb;
     comboPattern = cbp || DEFAULT_COMBO_PATTERN;
@@ -177,44 +180,6 @@ pagelet.autoload = function() {
         }
     }, false);
 };
-/**
- *  Messages
- */
-var callbacks = {};
-function _emit (type) {
-    var handlers = callbacks[type];
-    var args = [].slice.call(arguments);
-    args.shift();
-    if (handlers) {
-        handlers.forEach(function () {
-            fn.apply(pagelet, args);
-        })
-    }
-}
-pagelet.on = function (type, fn) {
-    var handlers = callbacks[type];
-
-    !handlers && (handlers = callbacks[type] = []);
-    (!~handlers.indexOf(fn)) && handlers.push(fn);
-
-}
-pagelet.off = function (type, fn) {
-    if (arguments.length >= 2) {
-        callbacks[type] = null;
-    } else {
-        var handlers = callbacks[type];
-        if (!handlers) return;
-
-        var nexts = []
-        var matched
-        callbacks[type] = handlers.forEach(function (h) {
-            if (h === fn) matched = true
-            else nexts.push(h)
-        });
-        matched && (callbacks[type] = nexts)
-    }
-    return this
-}
 
 function _addResource(result, collect, type) {
     if (collect && collect.length) {
