@@ -6,7 +6,7 @@ var watch = require('gulp-watch')
 
 
 gulp.task('watch', function () {
-    watch('lib/*.js', function () {
+    watch(['lib/*.js', 'pagelet.js'], function () {
         gulp.start('default')
     })
 });
@@ -21,6 +21,7 @@ gulp.task('default', function() {
             }
         }))
         .pipe(gulp.dest('dist/'))
+        .pipe(gulp.dest('test/'))
         .pipe(uglify('pagelet.min.js', {
             mangle: true,
             compress: true

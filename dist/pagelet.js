@@ -57,77 +57,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	var global = window;
-	var loaded = {};
-	var UA = navigator.userAgent
-	var docm = document
 	var hist = global.history
-	var isOldWebKit = +UA.replace(/.*AppleWebKit\/(\d+)\..*/, '$1') < 536;
-	var head = docm.head || docm.getElementsByTagName('head')[0];
-
-	var TIMEOUT = 60 * 1000; // pagelet请求的默认超时时间
-	var combo = false; // 是否采用combo
+	var $docm = document
 	var DEFAULT_COMBO_PATTERN = '/co??%s';
 	var comboPattern = DEFAULT_COMBO_PATTERN;
-
+	var combo = false; // 是否采用combo
+	var loaded = {};
+	var loader = __webpack_require__(1)
 
 	// 是否支持Html5的PushState
 	var supportPushState =
 	    hist && hist.pushState && hist.replaceState &&
 	    // pushState isn't reliable on iOS until 5.
-	    !UA.match(/((iPod|iPhone|iPad).+\bOS\s+[1-4]\D|WebApps\/.+CFNetwork)/);
-
-	function load(url, type, callback) {
-	    var isScript = type === 'js';
-	    var isCss = type === 'css';
-	    var node = docm.createElement(isScript ? 'script' : 'link');
-	    var supportOnload = 'onload' in node;
-	    var tid = setTimeout(function() {
-	        clearTimeout(tid);
-	        clearInterval(intId);
-	        callback('timeout');
-	    }, TIMEOUT);
-
-	    var intId;
-	    if (isScript) {
-	        node.type = 'text/javascript';
-	        node.async = 'async';
-	        node.src = url;
-	    } else {
-	        if (isCss) {
-	            node.type = 'text/css';
-	            node.rel = 'stylesheet';
-	        }
-	        node.href = url;
-	    }
-	    node.onload = node.onreadystatechange = function() {
-	        if (node && (!node.readyState || /loaded|complete/.test(node.readyState))) {
-	            clearTimeout(tid);
-	            node.onload = node.onreadystatechange = noop;
-	            if (isScript && head && node.parentNode) head.removeChild(node);
-	            callback();
-	            node = null;
-	        }
-	    };
-	    node.onerror = function(e) {
-	        clearTimeout(tid);
-	        clearInterval(intId);
-	        e = (e || {}).error || new Error('load resource timeout');
-	        e.message = 'Error loading [' + url + ']: ' + e.message;
-	        callback(e);
-	    };
-	    _appendChild(head, node);
-	    if (isCss) {
-	        if (isOldWebKit || !supportOnload) {
-	            intId = setInterval(function() {
-	                if (node.sheet) {
-	                    clearTimeout(id);
-	                    clearInterval(intId);
-	                    callback();
-	                }
-	            }, 20);
-	        }
-	    }
-	}
+	    !navigator.userAgent.match(/((iPod|iPhone|iPad).+\bOS\s+[1-4]\D|WebApps\/.+CFNetwork)/);
 
 	/**
 	 *  pagelet module methods define
@@ -143,73 +85,50 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	};
 
-	var xhr, state;
-
+	var state;
 	pagelet.load = function(url, pagelets, callback, progress) {
 	    if (pagelets && pagelets.length) {
 	        callback = callback || noop;
 	        progress = progress || noop;
-	        if (is(pagelets, 'String')) {
+	        if (_is(pagelets, 'String')) {
 	            pagelets = pagelets.split(/\s*,\s*/);
 	        }
 	        pagelets = pagelets.join(',');
 	        var quickling = url + (url.indexOf('?') === -1 ? '?' : '&') + 'pagelets=' + encodeURIComponent(pagelets);
-	        if (xhr && xhr.readyState < 4) {
-	            xhr.onreadystatechange = noop;
-	            xhr.abort();
-	        }
-	        xhr = new global.XMLHttpRequest();
-	        xhr.onprogress = progress;
-	        xhr.onreadystatechange = function() {
-	            if (xhr.readyState == 4) {
-	                xhr.onreadystatechange = noop;
-	                var result, error = null;
-	                if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
-	                    result = xhr.responseText;
-	                    try {
-	                        result = JSON.parse(result);
-	                    } catch (e) {
-	                        error = e;
-	                    }
-	                    if (error) {
-	                        callback(error);
-	                    } else {
-	                        docm.title = result.title || docm.title;
-	                        var res = [];
-	                        addResource(res, result.js, 'js');
-	                        addResource(res, result.css, 'css');
-	                        var done = function() {
-	                            if (result.script && result.script.length) {
-	                                var left = '!function(){';
-	                                var right = '}();\n';
-	                                var code = left + result.script.join(right + left) + right;
-	                                exec(code);
-	                            }
-	                            //TODO input[autofocus], textarea[autofocus]
-	                            done = noop;
-	                        };
-	                        if (res && res.length) {
-	                            var len = res.length;
-	                            res.forEach(function(r) {
-	                                load(r.uri, r.type, function(err) {
-	                                    len--;
-	                                    if (len === 0) {
-	                                        callback(error, result, done);
-	                                    }
-	                                    error = err;
-	                                });
-	                            });
-	                        } else {
+	        loader.request(quickling, function (err, result) {
+	            if (err) return callback(err);
+
+	            $docm.title = result.title || $docm.title;
+	            var res = [];
+	            _addResource(res, result.js, 'js');
+	            _addResource(res, result.css, 'css');
+	            var done = function() {
+	                if (result.script && result.script.length) {
+	                    var left = '!function(){';
+	                    var right = '}();\n';
+	                    var code = left + result.script.join(right + left) + right;
+	                    exec(code);
+	                }
+	                //TODO input[autofocus], textarea[autofocus]
+	                done = noop;
+	            };
+
+	            var error = err
+	            if (res && res.length) {
+	                var len = res.length;
+	                res.forEach(function(r) {
+	                    loader(r.uri, r.type, function(e) {
+	                        len--;
+	                        if (len === 0) {
 	                            callback(error, result, done);
 	                        }
-	                    }
-	                } else {
-	                    callback(xhr.statusText || (xhr.status ? 'error' : 'abort'));
-	                }
+	                        error = e;
+	                    });
+	                });
+	            } else {
+	                callback(error, result, done);
 	            }
-	        };
-	        xhr.open('GET', quickling, true);
-	        xhr.send();
+	        }, progress)
 	    } else {
 	        location.href = url;
 	    }
@@ -220,12 +139,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if (!state) {
 	            state = {
 	                url: global.location.href,
-	                title: docm.title
+	                title: $docm.title
 	            };
-	            hist.replaceState(state, docm.title);
+	            hist.replaceState(state, $docm.title);
 	        }
 	        pagelet.load(url, pagelets, function(err, data, done) {
-	            var title = data.title || docm.title;
+	            var title = data.title || $docm.title;
 	            state = {
 	                url: url,
 	                title: title
@@ -233,11 +152,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	            hist.replaceState(state, title, url);
 	            // Clear out any focused controls before inserting new page contents.
 	            try {
-	                docm.activeElement.blur()
+	                $docm.activeElement.blur()
 	            } catch (e) {}
 	            if (processHtml(null, data.html) !== false) done();
 	        }, progress);
-	        if (xhr.readyState > 0) {
+
+	        var xhr = loader.xhr()
+	        if (xhr && xhr.readyState > 0) {
 	            hist.pushState(null, "", url);
 	        }
 	    } else {
@@ -252,7 +173,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	            location.href = state.url;
 	        }
 	    }, false);
-	    docm.docmElement.addEventListener('click', function(e) {
+
+	    $docm.documentElement.addEventListener('click', function(e) {
 	        var target = e.target;
 	        if (target.tagName.toLowerCase() === 'a') {
 	            // Middle click, cmd click, and ctrl click should open
@@ -291,11 +213,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	                        throw new Error(err);
 	                    } else {
 	                        for (var key in html) {
-	                            if (html.hasOwnProperty(key) && map.hasOwnProperty(key)) {
+	                            if (_hasOwn(html, key) && _hasOwn(map, key)) {
 	                                var parent = map[key];
-	                                var dom = docm.getElementById(parent);
+	                                var dom = $docm.getElementById(parent);
 	                                if (dom) {
-	                                    dom.innerHTML = html[key];
 	                                    dom = null;
 	                                    if (autocache === 'true') {
 	                                        // 下次点击不会触发pagelet请求
@@ -312,21 +233,46 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	    }, false);
 	};
-
 	/**
-	 *  Util functions
+	 *  Messages
 	 */
-	function noop() {}
-	function filter(item) {
-	    return !!item;
+	var callbacks = {};
+	function _emit (type) {
+	    var handlers = callbacks[type];
+	    var args = [].slice.call(arguments);
+	    args.shift();
+	    if (handlers) {
+	        handlers.forEach(function () {
+	            fn.apply(pagelet, args);
+	        })
+	    }
 	}
-	function _attr(el, attName) {
-	    return el.getAttribute(attName)
+	pagelet.on = function (type, fn) {
+	    var handlers = callbacks[type];
+
+	    !handlers && (handlers = callbacks[type] = []);
+	    (!~handlers.indexOf(fn)) && handlers.push(fn);
+
 	}
-	function _appendChild(node, child) {
-	    return node.appendChild(child);
+	pagelet.off = function (type, fn) {
+	    if (arguments.length >= 2) {
+	        callbacks[type] = null;
+	    } else {
+	        var handlers = callbacks[type];
+	        if (!handlers) return;
+
+	        var nexts = []
+	        var matched
+	        callbacks[type] = handlers.forEach(function (h) {
+	            if (h === fn) matched = true
+	            else nexts.push(h)
+	        });
+	        matched && (callbacks[type] = nexts)
+	    }
+	    return this
 	}
-	function addResource(result, collect, type) {
+
+	function _addResource(result, collect, type) {
 	    if (collect && collect.length) {
 	        collect = collect.filter(function(uri) {
 	            var has = loaded[uri] === true;
@@ -351,16 +297,140 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	    }
 	}
-	function is(obj, type) {
-	    return Object.prototype.toString.call(obj) === '[Object ' + type + ']';
-	}
+	/**
+	 *  Util functions
+	 */
+	function noop() {}
 	function exec(code) {
-	    var node = docm.createElement('script');
-	    _appendChild(node, docm.createTextNode(code));
-	    _appendChild(head, node);
+	    var node = $docm.createElement('script');
+	    _appendChild(node, $docm.createTextNode(code));
+	    _appendChild($head, node);
+	}
+	function filter(item) {
+	    return !!item;
+	}
+	function _appendChild(node, child) {
+	    return node.appendChild(child);
+	}
+	function _hasOwn (obj, prop) {
+	    return obj.hasOwnProperty(prop)
+	}
+	function _attr(el, attName) {
+	    return el.getAttribute(attName)
+	}
+	function _is(obj, type) {
+	    return Object.prototype.toString.call(obj) === '[Object ' + type + ']';
 	}
 
 	module.exports = pagelet;
+
+/***/ },
+/* 1 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {var isOldWebKit = +navigator.userAgent.replace(/.*AppleWebKit\/(\d+)\..*/, '$1') < 536;
+	var READY_STATE_CHANGE = 'onreadystatechange'
+	var READY_STATE = 'readyState'
+	var TIMEOUT = 60 * 1000; // pagelet请求的默认超时时间
+
+	var $docm = document
+	var $head = $docm.head || $docm.getElementsByTagName('head')[0];
+	var xhr;
+
+	function noop () {}
+
+	function loader (url, type, callback) {
+
+	    var isScript = type === 'js';
+	    var isCss = type === 'css';
+	    var node = $docm.createElement(isScript ? 'script' : 'link');
+	    var supportOnload = 'onload' in node;
+	    var tid = setTimeout(function() {
+	        clearTimeout(tid);
+	        clearInterval(intId);
+	        callback('timeout');
+	    }, TIMEOUT);
+	    var intId;
+
+	    if (isScript) {
+	        node.type = 'text/javascript';
+	        node.async = 'async';
+	        node.src = url;
+	    } else {
+	        if (isCss) {
+	            node.type = 'text/css';
+	            node.rel = 'stylesheet';
+	        }
+	        node.href = url;
+	    }
+	    node.onload = node[READY_STATE_CHANGE] = function() {
+	        if (node && (!node[READY_STATE] || /loaded|complete/.test(node[READY_STATE]))) {
+	            clearTimeout(tid);
+	            node.onload = node[READY_STATE_CHANGE] = noop;
+	            if (isScript && $head && node.parentNode) $head.removeChild(node);
+	            callback();
+	            node = null;
+	        }
+	    };
+	    node.onerror = function(e) {
+	        clearTimeout(tid);
+	        clearInterval(intId);
+	        e = (e || {}).error || new Error('load resource timeout');
+	        e.message = 'Error loading [' + url + ']: ' + e.message;
+	        callback(e);
+	    };
+
+	    $head.appendChild(node);
+
+	    if (isCss) {
+	        if (isOldWebKit || !supportOnload) {
+	            intId = setInterval(function() {
+	                if (node.sheet) {
+	                    clearTimeout(id);
+	                    clearInterval(intId);
+	                    callback();
+	                }
+	            }, 20);
+	        }
+	    }
+	};
+
+	loader.xhr = function () {
+	    return xhr
+	}
+	loader.request = function (quickling, callback, progress) {
+	    /**
+	     *  only on request in processing
+	     */
+	    if (xhr && xhr[READY_STATE] < 4) {
+	        xhr[READY_STATE_CHANGE] = noop;
+	        xhr.abort();
+	    }
+	    xhr = new global.XMLHttpRequest();
+	    xhr.onprogress = progress;
+	    xhr[READY_STATE_CHANGE] = function() {
+	        if (xhr[READY_STATE] == 4) {
+	            xhr[READY_STATE_CHANGE] = noop;
+	            var result, error = null;
+	            if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
+	                result = xhr.responseText;
+	                try {
+	                    result = JSON.parse(result);
+	                } catch (e) {
+	                    error = e;
+	                }
+	                error ? callback(error) : callback(null, result);
+	            } else {
+	                callback(xhr.statusText || (xhr.status ? 'error' : 'abort'));
+	            }
+	        }
+	    };
+	    xhr.open('GET', quickling, true);
+	    xhr.send();
+	};
+
+	module.exports = loader;
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ }
 /******/ ])
