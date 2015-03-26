@@ -32,17 +32,22 @@ pagelet.init = function(cb, cbp, used) {
     }
 };
 
-var state;
 pagelet.load = function(url, pagelets, callback, progress) {
     if (pagelets && pagelets.length) {
         callback = callback || noop;
         progress = progress || noop;
-        if (_is(pagelets, 'String')) {
+        if (_is(pagelets, 'string')) {
             pagelets = pagelets.split(/\s*,\s*/);
         }
-        pagelets = pagelets.join(',');
-        var quickling = url + (url.indexOf('?') === -1 ? '?' : '&') + 'pagelets=' + encodeURIComponent(pagelets);
-        loader.request(quickling, function (err, result) {
+        var quickling = url + (url.indexOf('?') === -1 ? '?' : '&') + 'pagelets=' + encodeURIComponent(pagelets.join(','));
+
+        loader.request(quickling, {
+            before: function (xhr) {
+                pagelet.emit('beforeload', pagelets, xhr)
+            }
+        }, function (err, result) {
+            pagelet.emit('loadend', pagelets, err, result)
+
             if (err) return callback(err);
 
             $docm.title = result.title || $docm.title;
@@ -80,6 +85,9 @@ pagelet.load = function(url, pagelets, callback, progress) {
         location.href = url;
     }
 };
+
+
+var state; // state is a cached var for last popstate
 
 pagelet.go = function(url, pagelets, processHtml, progress) {
     if (supportPushState && pagelets) {
@@ -228,7 +236,7 @@ function _attr(el, attName) {
     return el.getAttribute(attName)
 }
 function _is(obj, type) {
-    return Object.prototype.toString.call(obj) === '[Object ' + type + ']';
+    return Object.prototype.toString.call(obj).toLowerCase() === '[object ' + type + ']';
 }
 
 module.exports = pagelet;

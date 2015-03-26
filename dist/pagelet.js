@@ -79,17 +79,22 @@ var pagelet =
 	    }
 	};
 
-	var state;
 	pagelet.load = function(url, pagelets, callback, progress) {
 	    if (pagelets && pagelets.length) {
 	        callback = callback || noop;
 	        progress = progress || noop;
-	        if (_is(pagelets, 'String')) {
+	        if (_is(pagelets, 'string')) {
 	            pagelets = pagelets.split(/\s*,\s*/);
 	        }
-	        pagelets = pagelets.join(',');
-	        var quickling = url + (url.indexOf('?') === -1 ? '?' : '&') + 'pagelets=' + encodeURIComponent(pagelets);
-	        loader.request(quickling, function (err, result) {
+	        var quickling = url + (url.indexOf('?') === -1 ? '?' : '&') + 'pagelets=' + encodeURIComponent(pagelets.join(','));
+
+	        loader.request(quickling, {
+	            before: function (xhr) {
+	                pagelet.emit('beforeload', pagelets, xhr)
+	            }
+	        }, function (err, result) {
+	            pagelet.emit('loadend', pagelets, err, result)
+
 	            if (err) return callback(err);
 
 	            $docm.title = result.title || $docm.title;
@@ -127,6 +132,9 @@ var pagelet =
 	        location.href = url;
 	    }
 	};
+
+
+	var state; // state is a cached var for last popstate
 
 	pagelet.go = function(url, pagelets, processHtml, progress) {
 	    if (supportPushState && pagelets) {
@@ -275,7 +283,7 @@ var pagelet =
 	    return el.getAttribute(attName)
 	}
 	function _is(obj, type) {
-	    return Object.prototype.toString.call(obj) === '[Object ' + type + ']';
+	    return Object.prototype.toString.call(obj).toLowerCase() === '[object ' + type + ']';
 	}
 
 	module.exports = pagelet;
@@ -354,7 +362,8 @@ var pagelet =
 	loader.xhr = function () {
 	    return xhr
 	}
-	loader.request = function (quickling, callback, progress) {
+	loader.request = function (quickling, options, callback, progress) {
+	    var before = options.before || noop
 	    /**
 	     *  only on request in processing
 	     */
@@ -377,10 +386,13 @@ var pagelet =
 	                }
 	                error ? callback(error) : callback(null, result);
 	            } else {
-	                callback(xhr.statusText || (xhr.status ? 'error' : 'abort'));
+	                error = xhr.statusText || (xhr.status ? 'error' : 'abort')
+	                callback(error);
 	            }
 	        }
 	    };
+
+	    before(xhr);
 	    xhr.open('GET', quickling, true);
 	    xhr.send();
 	};
@@ -397,12 +409,12 @@ var pagelet =
 	     *  Messages
 	     */
 	    var callbacks = {};
-	    function _emit (type) {
+	    raw.emit = function (type) {
 	        var handlers = callbacks[type];
 	        var args = [].slice.call(arguments);
 	        args.shift();
 	        if (handlers) {
-	            handlers.forEach(function () {
+	            handlers.forEach(function (fn) {
 	                fn.apply(raw, args);
 	            })
 	        }
