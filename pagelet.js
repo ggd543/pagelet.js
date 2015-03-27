@@ -1,5 +1,9 @@
+/**
+ *  Pagelet main module
+ */
+
+var $document = document
 var hist = global.history
-var $docm = document
 var comboPattern = DEFAULT_COMBO_PATTERN;
 var combo = false; // 是否采用combo
 var loaded = {};
@@ -43,7 +47,7 @@ pagelet.load = function(url, pagelets, callback, progress) {
 
             if (err) return callback(err);
 
-            $docm.title = result.title || $docm.title;
+            $document.title = result.title || $document.title;
             var res = [];
             _addResource(res, result.js, 'js');
             _addResource(res, result.css, 'css');
@@ -87,12 +91,12 @@ pagelet.go = function(url, pagelets, processHtml, progress) {
         if (!state) {
             state = {
                 url: global.location.href,
-                title: $docm.title
+                title: $document.title
             };
-            hist.replaceState(state, $docm.title);
+            hist.replaceState(state, $document.title);
         }
         pagelet.load(url, pagelets, function(err, data, done) {
-            var title = data.title || $docm.title;
+            var title = data.title || $document.title;
             state = {
                 url: url,
                 title: title
@@ -100,7 +104,7 @@ pagelet.go = function(url, pagelets, processHtml, progress) {
             hist.replaceState(state, title, url);
             // Clear out any focused controls before inserting new page contents.
             try {
-                $docm.activeElement.blur()
+                $document.activeElement.blur()
             } catch (e) {}
             if (processHtml(null, data.html) !== false) done();
         }, progress);
@@ -122,7 +126,7 @@ pagelet.autoload = function() {
         }
     }, false);
 
-    $docm.documentElement.addEventListener('click', function(e) {
+    $document.documentElement.addEventListener('click', function(e) {
         var target = e.target;
         if (target.tagName.toLowerCase() === 'a') {
             // Middle click, cmd click, and ctrl click should open
@@ -163,7 +167,7 @@ pagelet.autoload = function() {
                         for (var key in html) {
                             if (_hasOwn(html, key) && _hasOwn(map, key)) {
                                 var parent = map[key];
-                                var dom = $docm.getElementById(parent);
+                                var dom = $document.getElementById(parent);
                                 if (dom) {
                                     dom = null;
                                     if (autocache === 'true') {
