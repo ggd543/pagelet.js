@@ -1,22 +1,15 @@
-'use strict';
-
-var global = window;
 var hist = global.history
 var $docm = document
-var DEFAULT_COMBO_PATTERN = '/co??%s';
 var comboPattern = DEFAULT_COMBO_PATTERN;
 var combo = false; // 是否采用combo
 var loaded = {};
-var loader = require('./lib/loader')
-var messagify = require('./lib/messagify')
 // 是否支持Html5的PushState
 var supportPushState =
     hist && hist.pushState && hist.replaceState &&
     // pushState isn't reliable on iOS until 5.
     !navigator.userAgent.match(/((iPod|iPhone|iPad).+\bOS\s+[1-4]\D|WebApps\/.+CFNetwork)/);
 
-
-var pagelet = {};
+var pagelet = global.pagelet = {};
 /**
  *  Attature message function to pagelet instance
  */
@@ -59,7 +52,7 @@ pagelet.load = function(url, pagelets, callback, progress) {
                     var left = '!function(){';
                     var right = '}();\n';
                     var code = left + result.script.join(right + left) + right;
-                    exec(code);
+                    _exec(code);
                 }
                 //TODO input[autofocus], textarea[autofocus]
                 done = noop;
@@ -143,8 +136,8 @@ pagelet.autoload = function() {
             var autocache = _attr(target, 'data-autocache');
             var href = _attr(target, 'href');
 
-            pagelets = (pagelets || '').split(/\s*,\s*/).filter(filter);
-            parents = (parents || '').split(/\s*,\s*/).filter(filter);
+            pagelets = (pagelets || '').split(/\s*,\s*/).filter(_filter);
+            parents = (parents || '').split(/\s*,\s*/).filter(_filter);
 
             if (href && parents.length === pagelets.length && pagelets.length > 0) {
                 e.preventDefault();
@@ -214,29 +207,3 @@ function _addResource(result, collect, type) {
         }
     }
 }
-/**
- *  Util functions
- */
-function noop() {}
-function exec(code) {
-    var node = $docm.createElement('script');
-    _appendChild(node, $docm.createTextNode(code));
-    _appendChild($head, node);
-}
-function filter(item) {
-    return !!item;
-}
-function _appendChild(node, child) {
-    return node.appendChild(child);
-}
-function _hasOwn (obj, prop) {
-    return obj.hasOwnProperty(prop)
-}
-function _attr(el, attName) {
-    return el.getAttribute(attName)
-}
-function _is(obj, type) {
-    return Object.prototype.toString.call(obj).toLowerCase() === '[object ' + type + ']';
-}
-
-module.exports = pagelet;
