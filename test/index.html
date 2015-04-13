@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>pagelet.js -- testing</title>
+</head>
+<body>
+    <div id="pagelet"></div>
+    <a href="/index" data-parents="pagelet" data-pagelets="index">get pagelet</a>
+    <script src="pagelet.js"></script>
+    <script>
+        pagelet.on('beforeload', function (pagelets, xhr) {
+            console.log('-----beforeload', pagelets, xhr)
+        })
+        pagelet.on('loadend', function (pagelets, err, result) {
+            console.log('-----loadend', pagelets, err, result)
+        })
+        pagelet.load('/index', 'index', function (err, data, done) {
+            console.log('load', data)
+            done()
+        })
+        pagelet.autoload()
+    </script>
+</body>
+</html>

@@ -1,3 +1,181 @@
+;(function (global) {
+'use strict';
+/**
+ *  Universal Consts for all modules
+ */
+
+var READY_STATE_CHANGE = 'onreadystatechange'
+var READY_STATE = 'readyState'
+var TIMEOUT = 60 * 1000; // pagelet请求的默认超时时间
+var DEFAULT_COMBO_PATTERN = '/co??%s';
+/**
+ *  Util functions
+ */
+function noop() {}
+function _exec(code) {
+    var node = $docm.createElement('script');
+    _appendChild(node, $docm.createTextNode(code));
+    _appendChild($head, node);
+}
+function _filter(item) {
+    return !!item;
+}
+function _appendChild(node, child) {
+    return node.appendChild(child);
+}
+function _hasOwn (obj, prop) {
+    return obj.hasOwnProperty(prop)
+}
+function _attr(el, attName) {
+    return el.getAttribute(attName)
+}
+function _is(obj, type) {
+    return Object.prototype.toString.call(obj).toLowerCase() === '[object ' + type + ']';
+}
+/**
+ *  Ajax request loader
+ */
+var isOldWebKit = +navigator.userAgent.replace(/.*AppleWebKit\/(\d+)\..*/, '$1') < 536;
+var $head = document.head || document.getElementsByTagName('head')[0];
+
+var xhr;
+function loader (url, type, callback) {
+
+    var isScript = type === 'js';
+    var isCss = type === 'css';
+    var node = document.createElement(isScript ? 'script' : 'link');
+    var supportOnload = 'onload' in node;
+    var tid = setTimeout(function() {
+        clearTimeout(tid);
+        clearInterval(intId);
+        callback('timeout');
+    }, TIMEOUT);
+    var intId;
+
+    if (isScript) {
+        node.type = 'text/javascript';
+        node.async = 'async';
+        node.src = url;
+    } else {
+        if (isCss) {
+            node.type = 'text/css';
+            node.rel = 'stylesheet';
+        }
+        node.href = url;
+    }
+    node.onload = node[READY_STATE_CHANGE] = function() {
+        if (node && (!node[READY_STATE] || /loaded|complete/.test(node[READY_STATE]))) {
+            clearTimeout(tid);
+            node.onload = node[READY_STATE_CHANGE] = noop;
+            if (isScript && $head && node.parentNode) $head.removeChild(node);
+            callback();
+            node = null;
+        }
+    };
+    node.onerror = function(e) {
+        clearTimeout(tid);
+        clearInterval(intId);
+        e = (e || {}).error || new Error('load resource timeout');
+        e.message = 'Error loading [' + url + ']: ' + e.message;
+        callback(e);
+    };
+
+    _appendChild($head, node);
+
+    if (isCss) {
+        if (isOldWebKit || !supportOnload) {
+            intId = setInterval(function() {
+                if (node.sheet) {
+                    clearTimeout(id);
+                    clearInterval(intId);
+                    callback();
+                }
+            }, 20);
+        }
+    }
+};
+
+loader.xhr = function () {
+    return xhr
+}
+loader.request = function (quickling, options, callback, progress) {
+    var before = options.before || noop
+    /**
+     *  only on request in processing
+     */
+    if (xhr && xhr[READY_STATE] < 4) {
+        xhr[READY_STATE_CHANGE] = noop;
+        xhr.abort();
+    }
+    xhr = new global.XMLHttpRequest();
+    xhr.onprogress = progress;
+    xhr[READY_STATE_CHANGE] = function() {
+        if (xhr[READY_STATE] == 4) {
+            xhr[READY_STATE_CHANGE] = noop;
+            var result, error = null;
+            if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
+                result = xhr.responseText;
+                try {
+                    result = JSON.parse(result);
+                } catch (e) {
+                    error = e;
+                }
+                error ? callback(error) : callback(null, result);
+            } else {
+                error = xhr.statusText || (xhr.status ? 'error' : 'abort')
+                callback(error);
+            }
+        }
+    };
+
+    before(xhr);
+    xhr.open('GET', quickling, true);
+    xhr.send();
+};
+/**
+ *  Attach message function to pagelet instance
+ */
+
+function messagify (raw) {
+    /**
+     *  Messages
+     */
+    var callbacks = {};
+    raw.emit = function (type) {
+        var handlers = callbacks[type];
+        var args = [].slice.call(arguments);
+        args.shift();
+        if (handlers) {
+            handlers.forEach(function (fn) {
+                fn.apply(raw, args);
+            })
+        }
+    }
+    raw.on = function (type, fn) {
+        var handlers = callbacks[type];
+
+        !handlers && (handlers = callbacks[type] = []);
+        (!~handlers.indexOf(fn)) && handlers.push(fn);
+
+    }
+    raw.off = function (type, fn) {
+        if (arguments.length >= 2) {
+            callbacks[type] = null;
+        } else {
+            var handlers = callbacks[type];
+            if (!handlers) return;
+
+            var nexts = []
+            var matched
+            callbacks[type] = handlers.forEach(function (h) {
+                if (h === fn) matched = true
+                else nexts.push(h)
+            });
+            matched && (callbacks[type] = nexts)
+        }
+        return this
+    }
+}
 /**
  *  Pagelet main module
  */
@@ -211,3 +389,5 @@ function _addResource(result, collect, type) {
         }
     }
 }
+
+})(window);
